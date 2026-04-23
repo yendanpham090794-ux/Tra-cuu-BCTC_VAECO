@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chatbot Báo cáo Tài chính v2</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<!-- docx.js for Word export -->
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f5f5f0;color:#1a1a18;min-height:100vh;display:flex;justify-content:center;padding:16px}
+.app{width:100%;max-width:860px}
+.header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.logo{width:36px;height:36px;border-radius:10px;background:#e8f0fe;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px}
+.header-title{font-weight:500;font-size:16px}
+.header-sub{font-size:12px;color:#888}
+.badge{padding:3px 10px;border-radius:20px;font-size:12px;display:inline-block}
+.badge-ok{background:#eaf3de;color:#3b6d11}
+.badge-err{background:#fcebeb;color:#a32d2d}
+.badge-warn{background:#faeeda;color:#854f0b}
+.badge-info{background:#e6f1fb;color:#185fa5}
+.tabs{display:flex;border-bottom:1px solid #e0ded6;margin-bottom:14px;gap:4px;overflow-x:auto}
+.tab{padding:7px 16px;border:none;background:none;cursor:pointer;font-size:14px;color:#888;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tab.active{font-weight:500;color:#1a1a18;border-bottom-color:#1a1a18}
+.panel{display:none}.panel.active{display:block}
+.card{padding:16px;background:#fff;border-radius:12px;border:1px solid #e0ded6;margin-bottom:12px}
+.card-title{font-weight:500;margin-bottom:10px;font-size:15px}
+input[type=text]{padding:9px 12px;border-radius:8px;border:1px solid #ccc;font-size:14px;background:#fff;color:#1a1a18;outline:none}
+input[type=password]{padding:9px 12px;border-radius:8px;border:1px solid #ccc;font-size:14px;background:#fff;color:#1a1a18;outline:none}
+select{padding:9px 12px;border-radius:8px;border:1px solid #ccc;font-size:14px;background:#fff;color:#1a1a18;outline:none;cursor:pointer}
+textarea{width:100%;min-height:140px;padding:10px 12px;border-radius:8px;border:1px solid #ccc;font-size:13px;background:#fff;color:#1a1a18;resize:vertical;line-height:1.6;outline:none;font-family:inherit}
+.btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:500;white-space:nowrap}
+.btn-primary{background:#1a1a18;color:#fff}
+.btn-green{background:#1d9e75;color:#fff}
+.btn-blue{background:#185fa5;color:#fff}
+.btn-red{background:#e24b4a;color:#fff}
+.btn-outline{background:#fff;color:#1a1a18;border:1px solid #ccc}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn:hover:not(:disabled){opacity:.85}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.err-box{margin-bottom:10px;padding:8px 12px;border-radius:8px;background:#fcebeb;color:#a32d2d;font-size:13px}
+/* Doc library */
+.doc-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.doc-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;border:1px solid #e0ded6;background:#fff;transition:background .15s}
+.doc-item:hover{background:#f5f5f0}
+.doc-item.active-doc{border-color:#1d9e75;background:#e1f5ee}
+.doc-icon{font-size:20px;flex-shrink:0}
+.doc-info{flex:1;min-width:0}
+.doc-name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doc-meta{font-size:12px;color:#888;margin-top:2px}
+.doc-actions{display:flex;gap:6px;flex-shrink:0}
+.icon-btn{padding:5px 8px;border-radius:6px;border:1px solid #e0ded6;background:none;cursor:pointer;font-size:13px}
+.icon-btn:hover{background:#f0ede6}
+.upload-zone{border:2px dashed #ccc;border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:border-color .2s;margin-bottom:12px}
+.upload-zone:hover{border-color:#1d9e75}
+.upload-zone-icon{font-size:28px;margin-bottom:8px}
+.upload-zone-text{font-size:14px;color:#666}
+.upload-zone-sub{font-size:12px;color:#aaa;margin-top:4px}
+/* Chat */
+.msgs{min-height:320px;max-height:440px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;margin-bottom:14px;padding:4px 0}
+.empty{text-align:center;padding:28px 16px}
+.empty-icon{font-size:36px;margin-bottom:10px}
+.empty-title{font-weight:500;margin-bottom:6px;font-size:15px}
+.empty-sub{font-size:13px;color:#888;margin-bottom:20px;line-height:1.7}
+.suggestions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.chip{padding:6px 12px;border-radius:20px;border:1px solid #ccc;background:#fff;color:#555;cursor:pointer;font-size:12px}
+.chip:hover{background:#f0ede6}
+.msg-row{display:flex;align-items:flex-start}
+.msg-row.user{justify-content:flex-end}
+.avatar{width:28px;height:28px;border-radius:8px;background:#e8f0fe;display:flex;align-items:center;justify-content:center;margin-right:8px;flex-shrink:0;margin-top:2px;font-size:14px}
+.bubble{max-width:78%;padding:10px 14px;font-size:14px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
+.bubble.user{background:#1a1a18;color:#fff;border-radius:16px 16px 4px 16px}
+.bubble.bot{background:#fff;color:#1a1a18;border-radius:16px 16px 16px 4px;border:1px solid #e0ded6}
+.chip-row{display:flex;gap:6px;overflow-x:auto;margin-bottom:10px;padding-bottom:2px}
+.input-row{display:flex;gap:8px}
+.chat-input{flex:1;padding:11px 14px;border-radius:10px;border:1px solid #ccc;font-size:14px;background:#fff;color:#1a1a18;outline:none;font-family:inherit}
+.btn-send{padding:11px 18px;border-radius:10px;background:#1d9e75;color:#fff;border:none;cursor:pointer;font-weight:500;font-size:14px}
+.btn-send:disabled{opacity:.4;cursor:not-allowed}
+.btn-clear{padding:11px 13px;border-radius:10px;border:1px solid #ccc;background:none;color:#888;cursor:pointer;font-size:14px}
+.active-doc-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#e1f5ee;border-radius:8px;margin-bottom:10px;font-size:13px;color:#0f6e56}
+.setup-step{display:flex;gap:10px;margin-bottom:14px}
+.step-num{width:24px;height:24px;border-radius:50%;background:#1a1a18;color:#fff;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-body{font-size:13px;line-height:1.7;color:#444}
+code{background:#f0ede6;padding:2px 6px;border-radius:4px;font-size:12px;font-family:monospace}
+a{color:#185fa5}
+.empty-lib{text-align:center;padding:24px;color:#aaa;font-size:13px}
+/* Export toolbar */
+.export-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f0ede6;border-radius:8px;margin-bottom:10px;flex-wrap:wrap}
+.export-bar-label{font-size:12px;color:#666;margin-right:4px}
+/* Drive sync */
+.sync-status{font-size:12px;color:#888;display:flex;align-items:center;gap:6px}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#ccc;flex-shrink:0}
+.sync-dot.ok{background:#1d9e75}
+.sync-dot.err{background:#e24b4a}
+.sync-dot.busy{background:#f5a623;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.gdrive-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#e8f0fe;border-radius:8px;margin-bottom:10px;font-size:13px;color:#185fa5;flex-wrap:wrap}
+.input-full{width:100%;padding:9px 12px;border-radius:8px;border:1px solid #ccc;font-size:14px;background:#fff;color:#1a1a18;outline:none}
+.section-label{font-size:12px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">🤖</div>
+    <div>
+      <div class="header-title">Chatbot Báo cáo Tài chính v2</div>
+      <div class="header-sub">OpenAI · Google Drive Sync · Xuất Excel/Word</div>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;margin-left:auto;flex-wrap:wrap">
+      <span id="api-badge" class="badge badge-warn">⏳ Chưa có key</span>
+      <span id="drive-badge" class="badge badge-info" style="display:none">☁️ Drive</span>
+      <span id="active-badge" class="badge badge-info" style="display:none"></span>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('chat')">💬 Chat</button>
+    <button class="tab" onclick="switchTab('docs')">📚 Thư viện (<span id="doc-count">0</span>)</button>
+    <button class="tab" onclick="switchTab('setup')">⚙️ Cài đặt</button>
+  </div>
+
+  <!-- CHAT TAB -->
+  <div id="tab-chat" class="panel active">
+    <div id="active-doc-bar" class="active-doc-bar" style="display:none">
+      <span>📄</span>
+      <span id="active-doc-name" style="font-weight:500;flex:1"></span>
+      <span id="active-doc-meta" style="color:#3b6d11;font-size:12px"></span>
+      <button class="icon-btn" onclick="setActiveDoc(null)" style="font-size:11px;color:#666">✕ Bỏ chọn</button>
+    </div>
+
+    <div class="msgs" id="msgs">
+      <div class="empty" id="empty">
+        <div class="empty-icon">🤖</div>
+        <div class="empty-title">Chatbot BCTC · OpenAI</div>
+        <div class="empty-sub" id="empty-sub">Đang khởi động...</div>
+        <div class="suggestions" id="suggestions"></div>
+      </div>
+    </div>
+
+    <div id="err-box" class="err-box" style="display:none"></div>
+
+    <!-- Export bar (ẩn lúc đầu) -->
+    <div class="export-bar" id="export-bar" style="display:none">
+      <span class="export-bar-label">📤 Xuất hội thoại:</span>
+      <button class="btn btn-outline btn-sm" onclick="exportExcel()">📊 Excel</button>
+      <button class="btn btn-outline btn-sm" onclick="exportWord()">📝 Word</button>
+      <button class="btn btn-outline btn-sm" onclick="exportTxt()">📄 TXT</button>
+    </div>
+
+    <div class="chip-row" id="chip-row" style="display:none"></div>
+    <div class="input-row">
+      <input class="chat-input" id="chat-input" type="text" placeholder="Nhập câu hỏi về BCTC..." onkeydown="if(event.key==='Enter')sendMsg()">
+      <button class="btn-send" id="btn-send" onclick="sendMsg()">Gửi</button>
+      <button class="btn-clear" id="btn-clear" onclick="clearChat()" style="display:none" title="Xóa hội thoại">🗑</button>
+    </div>
+  </div>
+
+  <!-- DOCS TAB -->
+  <div id="tab-docs" class="panel">
+
+    <!-- Google Drive sync bar -->
+    <div class="gdrive-bar" id="gdrive-bar" style="display:none">
+      <span>☁️ <b>Google Drive</b></span>
+      <div class="sync-status">
+        <div class="sync-dot" id="sync-dot"></div>
+        <span id="sync-label">Chưa đồng bộ</span>
+      </div>
+      <button class="btn btn-blue btn-sm" onclick="syncFromDrive()" id="btn-sync-down" style="margin-left:auto">⬇ Tải về</button>
+      <button class="btn btn-blue btn-sm" onclick="syncToDrive()" id="btn-sync-up">⬆ Lưu lên Drive</button>
+    </div>
+
+    <div class="upload-zone" onclick="document.getElementById('file-upload').click()" id="upload-zone">
+      <div class="upload-zone-icon">📂</div>
+      <div class="upload-zone-text">Nhấn để tải tài liệu lên thư viện</div>
+      <div class="upload-zone-sub">Hỗ trợ: Excel (.xlsx, .xls) · Word (.docx) · Text (.txt) · CSV (.csv)</div>
+    </div>
+    <input type="file" id="file-upload" multiple accept=".xlsx,.xls,.docx,.txt,.csv" style="display:none" onchange="uploadFiles(this)">
+    <div id="upload-status" style="display:none;margin-bottom:10px;font-size:13px;color:#0f6e56;padding:8px 12px;background:#e1f5ee;border-radius:8px"></div>
+
+    <!-- Paste text -->
+    <div class="card">
+      <div class="card-title">Hoặc nhập thủ công</div>
+      <div class="row" style="margin-bottom:8px">
+        <input type="text" id="paste-name" placeholder="Tên tài liệu (ví dụ: BCTC Q1 2024)" style="flex:1">
+        <button class="btn btn-primary" onclick="saveManual()">💾 Lưu</button>
+      </div>
+      <textarea id="paste-text" placeholder="Dán nội dung BCTC vào đây..."></textarea>
+    </div>
+
+    <!-- Doc list -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="card-title" style="margin-bottom:0">Tài liệu đã lưu (<span id="doc-count2">0</span>)</div>
+        <button class="btn btn-outline" onclick="if(confirm('Xóa tất cả tài liệu?'))clearAllDocs()" style="font-size:12px;padding:5px 10px">🗑 Xóa tất cả</button>
+      </div>
+      <div class="doc-list" id="doc-list">
+        <div class="empty-lib">Chưa có tài liệu nào. Tải lên để bắt đầu.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETUP TAB -->
+  <div id="tab-setup" class="panel">
+
+    <!-- OpenAI -->
+    <div class="card">
+      <div class="card-title">🔑 OpenAI API Key</div>
+      <div style="margin-bottom:10px">
+        <div class="row" style="margin-bottom:6px">
+          <input type="password" id="api-key-input" class="input-full" placeholder="sk-..." autocomplete="off" style="flex:1">
+          <button class="btn btn-green" onclick="saveApiKey()">💾 Lưu</button>
+          <button class="btn btn-outline" onclick="clearApiKey()">🗑</button>
+        </div>
+        <div id="key-status" style="font-size:12px;color:#888"></div>
+      </div>
+      <div class="row" style="gap:12px;margin-top:8px">
+        <div>
+          <div class="section-label">Model</div>
+          <select id="model-select">
+            <option value="gpt-4o-mini">gpt-4o-mini (nhanh, rẻ)</option>
+            <option value="gpt-4o">gpt-4o (mạnh nhất)</option>
+            <option value="gpt-4-turbo">gpt-4-turbo</option>
+            <option value="gpt-3.5-turbo">gpt-3.5-turbo (rẻ nhất)</option>
+          </select>
+        </div>
+        <div>
+          <div class="section-label">Context tối đa</div>
+          <select id="ctx-select">
+            <option value="8000">8.000 ký tự</option>
+            <option value="14000" selected>14.000 ký tự</option>
+            <option value="20000">20.000 ký tự</option>
+            <option value="32000">32.000 ký tự</option>
+          </select>
+        </div>
+      </div>
+      <div style="font-size:12px;color:#aaa;margin-top:10px">Key lưu local trong trình duyệt. Lấy key tại <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a></div>
+    </div>
+
+    <!-- Google Drive -->
+    <div class="card">
+      <div class="card-title">☁️ Google Drive — Đồng bộ Tài liệu</div>
+      <p style="font-size:13px;color:#555;margin-bottom:12px;line-height:1.7">
+        Lưu thư viện tài liệu lên Google Drive để dùng được trên mọi thiết bị. App sẽ đọc/ghi một file <code>bctc_library.json</code> trong Drive của bạn.
+      </p>
+
+      <div class="setup-step"><div class="step-num">1</div><div class="step-body">Vào <a href="https://console.cloud.google.com/" target="_blank">console.cloud.google.com</a> → Tạo project → Bật <b>Google Drive API</b></div></div>
+      <div class="setup-step"><div class="step-num">2</div><div class="step-body">Tạo <b>OAuth 2.0 Client ID</b> (loại: Web application) → Thêm <code>http://localhost</code> và URL file này vào Authorized origins</div></div>
+      <div class="setup-step"><div class="step-num">3</div><div class="step-body">Dán <b>Client ID</b> vào bên dưới và nhấn Kết nối</div></div>
+
+      <div class="row" style="margin-top:10px;margin-bottom:8px">
+        <input type="text" id="gdrive-client-id" class="input-full" placeholder="xxxx.apps.googleusercontent.com" style="flex:1">
+        <button class="btn btn-blue" onclick="saveGDriveConfig()">💾 Lưu</button>
+      </div>
+      <div class="row">
+        <button class="btn btn-blue" id="btn-gdrive-auth" onclick="authGDrive()" disabled>🔗 Đăng nhập Google</button>
+        <button class="btn btn-outline" onclick="logoutGDrive()" id="btn-gdrive-logout" style="display:none">🔓 Đăng xuất</button>
+        <span id="gdrive-auth-status" class="badge badge-warn" style="margin-left:8px">Chưa kết nối</span>
+      </div>
+    </div>
+
+    <!-- Hướng dẫn -->
+    <div class="card">
+      <div class="card-title">📖 Hướng dẫn nhanh</div>
+      <div class="setup-step"><div class="step-num">1</div><div class="step-body">Nhập <b>OpenAI API Key</b> → Lưu</div></div>
+      <div class="setup-step"><div class="step-num">2</div><div class="step-body">Vào tab <b>📚 Thư viện</b> → Upload BCTC (.xlsx, .docx, .txt...)</div></div>
+      <div class="setup-step"><div class="step-num">3</div><div class="step-body">Chọn tài liệu → Nhấn <b>💬 Dùng</b> → Hỏi trong tab Chat</div></div>
+      <div class="setup-step"><div class="step-num">4</div><div class="step-body">Sau khi có câu trả lời, nhấn <b>📊 Excel</b> hoặc <b>📝 Word</b> để xuất</div></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// CONFIG & STATE
+// ============================================================
+var SYSTEM_PROMPT = "Bạn là trợ lý phân tích báo cáo tài chính chuyên nghiệp. Trả lời bằng tiếng Việt, rõ ràng, chính xác, nêu rõ số liệu và đơn vị (tỷ đồng / triệu đồng). Chỉ trả lời dựa trên dữ liệu được cung cấp. Nếu không có dữ liệu liên quan, hãy nói rõ.";
+var SUGGESTED = ["Doanh thu thuần là bao nhiêu?","Lợi nhuận sau thuế thay đổi như thế nào?","Phân tích chỉ số ROE và ROA","Tỷ lệ nợ trên vốn chủ sở hữu?","Tổng tài sản và vốn chủ sở hữu?","Dòng tiền từ hoạt động kinh doanh?"];
+var messages = [];
+var loading = false;
+var apiKeyOk = false;
+var activeDocId = null;
+var DB_KEY = "bctc_docs_v2";
+var API_KEY_STORAGE = "openai_api_key";
+var GDRIVE_CLIENT_ID_KEY = "gdrive_client_id";
+var GDRIVE_TOKEN_KEY = "gdrive_token";
+var GDRIVE_FILE_NAME = "bctc_library.json";
+var gdriveToken = null;
+var gdriveFileId = null;
+
+// ============================================================
+// LOCAL STORAGE
+// ============================================================
+function getDocs() { try { return JSON.parse(localStorage.getItem(DB_KEY) || "[]"); } catch(e){ return []; } }
+function saveDocs(docs) { localStorage.setItem(DB_KEY, JSON.stringify(docs)); }
+function genId() { return "doc_" + Date.now() + "_" + Math.random().toString(36).slice(2,7); }
+function getApiKey() { return localStorage.getItem(API_KEY_STORAGE) || ""; }
+
+// ============================================================
+// API KEY
+// ============================================================
+function saveApiKey() {
+  var key = document.getElementById("api-key-input").value.trim();
+  if (!key || !key.startsWith("sk-")) { alert("API Key không hợp lệ!"); return; }
+  localStorage.setItem(API_KEY_STORAGE, key);
+  document.getElementById("api-key-input").value = "";
+  setApiStatus(true, "✓ Đã lưu API Key");
+}
+function clearApiKey() {
+  if (!confirm("Xóa API Key?")) return;
+  localStorage.removeItem(API_KEY_STORAGE);
+  setApiStatus(false, "Đã xóa");
+}
+function setApiStatus(ok, msg) {
+  apiKeyOk = ok;
+  var b = document.getElementById("api-badge");
+  b.textContent = ok ? "✓ OpenAI" : "✗ Chưa có key";
+  b.className = "badge " + (ok ? "badge-ok" : "badge-err");
+  var s = document.getElementById("key-status");
+  if (s) { s.textContent = msg; s.style.color = ok ? "#0f6e56" : "#a32d2d"; }
+  updateEmptySub();
+}
+function checkApiKeyOnLoad() {
+  var key = getApiKey();
+  setApiStatus(!!(key && key.startsWith("sk-")), key ? "✓ API Key đã lưu" : "Chưa có API Key");
+}
+
+// ============================================================
+// GOOGLE DRIVE AUTH
+// ============================================================
+function saveGDriveConfig() {
+  var cid = document.getElementById("gdrive-client-id").value.trim();
+  if (!cid) { alert("Vui lòng nhập Client ID!"); return; }
+  localStorage.setItem(GDRIVE_CLIENT_ID_KEY, cid);
+  document.getElementById("btn-gdrive-auth").disabled = false;
+  alert("✓ Đã lưu Client ID. Nhấn 'Đăng nhập Google' để tiếp tục.");
+}
+
+function authGDrive() {
+  var cid = localStorage.getItem(GDRIVE_CLIENT_ID_KEY);
+  if (!cid) { alert("Chưa có Client ID. Vui lòng nhập và lưu trước."); return; }
+  var redirectUri = window.location.href.split("?")[0].split("#")[0];
+  var scope = "https://www.googleapis.com/auth/drive.file";
+  var url = "https://accounts.google.com/o/oauth2/v2/auth" +
+    "?client_id=" + encodeURIComponent(cid) +
+    "&redirect_uri=" + encodeURIComponent(redirectUri) +
+    "&response_type=token" +
+    "&scope=" + encodeURIComponent(scope);
+  window.location.href = url;
+}
+
+function handleOAuthCallback() {
+  var hash = window.location.hash;
+  if (!hash) return;
+  var params = {};
+  hash.slice(1).split("&").forEach(function(p){ var kv = p.split("="); params[kv[0]] = decodeURIComponent(kv[1]||""); });
+  if (params.access_token) {
+    var expiry = Date.now() + parseInt(params.expires_in || 3600) * 1000;
+    gdriveToken = params.access_token;
+    localStorage.setItem(GDRIVE_TOKEN_KEY, JSON.stringify({ token: gdriveToken, expiry: expiry }));
+    window.history.replaceState(null, null, window.location.pathname);
+    setDriveStatus(true);
+  }
+}
+
+function loadStoredToken() {
+  try {
+    var stored = JSON.parse(localStorage.getItem(GDRIVE_TOKEN_KEY) || "null");
+    if (stored && stored.expiry > Date.now()) {
+      gdriveToken = stored.token;
+      setDriveStatus(true);
+    } else {
+      setDriveStatus(false);
+    }
+  } catch(e) { setDriveStatus(false); }
+  var cid = localStorage.getItem(GDRIVE_CLIENT_ID_KEY);
+  if (cid) {
+    document.getElementById("gdrive-client-id").value = cid;
+    document.getElementById("btn-gdrive-auth").disabled = false;
+  }
+}
+
+function logoutGDrive() {
+  gdriveToken = null;
+  gdriveFileId = null;
+  localStorage.removeItem(GDRIVE_TOKEN_KEY);
+  setDriveStatus(false);
+}
+
+function setDriveStatus(ok) {
+  var badge = document.getElementById("gdrive-auth-status");
+  var driveBadge = document.getElementById("drive-badge");
+  var driveBar = document.getElementById("gdrive-bar");
+  var logoutBtn = document.getElementById("btn-gdrive-logout");
+  if (ok) {
+    badge.textContent = "✓ Đã kết nối";
+    badge.className = "badge badge-ok";
+    driveBadge.style.display = "inline";
+    driveBar.style.display = "flex";
+    logoutBtn.style.display = "inline-block";
+  } else {
+    badge.textContent = "Chưa kết nối";
+    badge.className = "badge badge-warn";
+    driveBadge.style.display = "none";
+    driveBar.style.display = "none";
+    logoutBtn.style.display = "none";
+  }
+}
+
+// ============================================================
+// GOOGLE DRIVE FILE OPS
+// ============================================================
+function setSyncStatus(state, label) {
+  var dot = document.getElementById("sync-dot");
+  var lbl = document.getElementById("sync-label");
+  dot.className = "sync-dot " + (state || "");
+  if (lbl) lbl.textContent = label || "";
+}
+
+function findDriveFile() {
+  return fetch("https://www.googleapis.com/drive/v3/files?q=name%3D%27" + GDRIVE_FILE_NAME + "%27%20and%20trashed%3Dfalse&fields=files(id,name)", {
+    headers: { "Authorization": "Bearer " + gdriveToken }
+  }).then(function(r){ return r.json(); }).then(function(d){
+    var files = d.files || [];
+    return files.length ? files[0].id : null;
+  });
+}
+
+function syncFromDrive() {
+  if (!gdriveToken) { alert("Chưa đăng nhập Google Drive."); return; }
+  setSyncStatus("busy", "Đang tải về...");
+  document.getElementById("btn-sync-down").disabled = true;
+  findDriveFile().then(function(fid) {
+    if (!fid) { setSyncStatus("err", "Chưa có file trên Drive"); document.getElementById("btn-sync-down").disabled = false; return; }
+    gdriveFileId = fid;
+    return fetch("https://www.googleapis.com/drive/v3/files/" + fid + "?alt=media", {
+      headers: { "Authorization": "Bearer " + gdriveToken }
+    }).then(function(r){ return r.json(); });
+  }).then(function(data) {
+    if (!data) return;
+    if (data.docs && Array.isArray(data.docs)) {
+      saveDocs(data.docs);
+      renderDocList();
+      setSyncStatus("ok", "✓ Đồng bộ " + new Date().toLocaleTimeString("vi-VN"));
+      alert("✓ Đã tải " + data.docs.length + " tài liệu từ Drive!");
+    }
+  }).catch(function(e){
+    setSyncStatus("err", "Lỗi: " + e.message);
+    alert("Lỗi tải từ Drive: " + e.message);
+  }).finally(function(){
+    document.getElementById("btn-sync-down").disabled = false;
+  });
+}
+
+function syncToDrive() {
+  if (!gdriveToken) { alert("Chưa đăng nhập Google Drive."); return; }
+  var docs = getDocs();
+  var content = JSON.stringify({ docs: docs, updated: new Date().toISOString() });
+  var blob = new Blob([content], { type: "application/json" });
+  setSyncStatus("busy", "Đang lưu lên Drive...");
+  document.getElementById("btn-sync-up").disabled = true;
+
+  findDriveFile().then(function(fid) {
+    var url, method;
+    if (fid) {
+      url = "https://www.googleapis.com/upload/drive/v3/files/" + fid + "?uploadType=media";
+      method = "PATCH";
+    } else {
+      // Create with metadata first
+      var meta = JSON.stringify({ name: GDRIVE_FILE_NAME, mimeType: "application/json" });
+      return fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + gdriveToken,
+          "Content-Type": "multipart/related; boundary=bound123"
+        },
+        body: "--bound123\r\nContent-Type: application/json\r\n\r\n" + meta + "\r\n--bound123\r\nContent-Type: application/json\r\n\r\n" + content + "\r\n--bound123--"
+      }).then(function(r){ return r.json(); });
+    }
+    return fetch(url, {
+      method: method,
+      headers: {
+        "Authorization": "Bearer " + gdriveToken,
+        "Content-Type": "application/json"
+      },
+      body: content
+    }).then(function(r){ return r.json(); });
+  }).then(function(result) {
+    if (result && result.id) {
+      gdriveFileId = result.id;
+      setSyncStatus("ok", "✓ Lưu lúc " + new Date().toLocaleTimeString("vi-VN"));
+      alert("✓ Đã lưu " + docs.length + " tài liệu lên Google Drive!");
+    }
+  }).catch(function(e){
+    setSyncStatus("err", "Lỗi: " + e.message);
+    alert("Lỗi lưu Drive: " + e.message);
+  }).finally(function(){
+    document.getElementById("btn-sync-up").disabled = false;
+  });
+}
+
+// ============================================================
+// DOCUMENT MANAGEMENT
+// ============================================================
+function fileIcon(type) {
+  if (type==="xlsx"||type==="xls") return "📊";
+  if (type==="docx") return "📝";
+  if (type==="csv") return "📋";
+  return "📄";
+}
+
+function uploadFiles(input) {
+  var files = Array.from(input.files);
+  if (!files.length) return;
+  var status = document.getElementById("upload-status");
+  status.style.display = "block";
+  status.textContent = "Đang xử lý " + files.length + " file...";
+  var done = 0;
+  files.forEach(function(file) {
+    var ext = file.name.split(".").pop().toLowerCase();
+    if (ext==="xlsx"||ext==="xls") {
+      var r = new FileReader();
+      r.onload = function(e) {
+        var wb = XLSX.read(e.target.result, {type:"array"});
+        var text = "";
+        wb.SheetNames.forEach(function(sn){ text += "=== Sheet: "+sn+" ===\n"+XLSX.utils.sheet_to_csv(wb.Sheets[sn])+"\n\n"; });
+        addDoc(file.name, ext, text, file.size);
+        checkDone(++done, files.length, status);
+      };
+      r.readAsArrayBuffer(file);
+    } else if (ext==="docx") {
+      var r2 = new FileReader();
+      r2.onload = function(e) {
+        mammoth.extractRawText({arrayBuffer: e.target.result}).then(function(res){
+          addDoc(file.name, ext, res.value, file.size);
+          checkDone(++done, files.length, status);
+        });
+      };
+      r2.readAsArrayBuffer(file);
+    } else {
+      var r3 = new FileReader();
+      r3.onload = function(e) { addDoc(file.name, ext, e.target.result, file.size); checkDone(++done, files.length, status); };
+      r3.readAsText(file, "utf-8");
+    }
+  });
+  input.value = "";
+}
+
+function checkDone(done, total, status) {
+  if (done===total) {
+    status.textContent = "✓ Đã tải " + total + " file thành công!";
+    setTimeout(function(){ status.style.display="none"; }, 3000);
+  }
+}
+
+function addDoc(name, type, content, size) {
+  var docs = getDocs();
+  docs.unshift({ id: genId(), name: name, type: type, content: content, size: size, date: new Date().toLocaleDateString("vi-VN") });
+  saveDocs(docs);
+  renderDocList();
+}
+
+function saveManual() {
+  var name = document.getElementById("paste-name").value.trim();
+  var content = document.getElementById("paste-text").value.trim();
+  if (!name||!content) { alert("Vui lòng nhập đủ tên và nội dung!"); return; }
+  addDoc(name, "txt", content, content.length);
+  document.getElementById("paste-name").value = "";
+  document.getElementById("paste-text").value = "";
+}
+
+function deleteDoc(id) {
+  if (!confirm("Xóa tài liệu này?")) return;
+  saveDocs(getDocs().filter(function(d){ return d.id!==id; }));
+  if (activeDocId===id) setActiveDoc(null);
+  renderDocList();
+}
+
+function clearAllDocs() { saveDocs([]); setActiveDoc(null); renderDocList(); }
+
+function setActiveDoc(id) {
+  activeDocId = id;
+  var doc = id ? getDocs().find(function(d){ return d.id===id; }) : null;
+  var bar = document.getElementById("active-doc-bar");
+  var badge = document.getElementById("active-badge");
+  if (doc) {
+    bar.style.display = "flex";
+    document.getElementById("active-doc-name").textContent = doc.name;
+    document.getElementById("active-doc-meta").textContent = doc.content.length.toLocaleString() + " ký tự";
+    badge.style.display = "inline"; badge.textContent = "📄 " + doc.name.slice(0,20);
+  } else { bar.style.display = "none"; badge.style.display = "none"; }
+  renderDocList(); updateEmptySub();
+}
+
+function renderDocList() {
+  var docs = getDocs();
+  document.getElementById("doc-count").textContent = docs.length;
+  document.getElementById("doc-count2").textContent = docs.length;
+  var list = document.getElementById("doc-list");
+  if (!docs.length) { list.innerHTML = '<div class="empty-lib">Chưa có tài liệu nào. Tải lên để bắt đầu.</div>'; return; }
+  list.innerHTML = "";
+  docs.forEach(function(doc) {
+    var item = document.createElement("div");
+    item.className = "doc-item" + (doc.id===activeDocId?" active-doc":"");
+    item.innerHTML =
+      '<div class="doc-icon">'+fileIcon(doc.type)+'</div>'+
+      '<div class="doc-info"><div class="doc-name">'+doc.name+'</div><div class="doc-meta">'+doc.type.toUpperCase()+' · '+doc.content.length.toLocaleString()+' ký tự · '+doc.date+'</div></div>'+
+      '<div class="doc-actions">'+
+        '<button class="icon-btn" onclick="setActiveDoc(\''+doc.id+'\');switchTab(\'chat\')">💬 Dùng</button>'+
+        '<button class="icon-btn" onclick="deleteDoc(\''+doc.id+'\')">🗑</button>'+
+      '</div>';
+    list.appendChild(item);
+  });
+}
+
+// ============================================================
+// UI HELPERS
+// ============================================================
+function switchTab(t) {
+  ["chat","docs","setup"].forEach(function(name, i){
+    document.querySelectorAll(".tab")[i].classList.toggle("active", name===t);
+  });
+  document.querySelectorAll(".panel").forEach(function(el){ el.classList.remove("active"); });
+  document.getElementById("tab-"+t).classList.add("active");
+}
+
+function updateEmptySub() {
+  var el = document.getElementById("empty-sub");
+  if (!el) return;
+  if (!apiKeyOk) el.innerHTML = "Cần nhập OpenAI API Key để dùng AI.<br>Vào tab ⚙️ Cài đặt để nhập key.";
+  else if (!activeDocId) el.innerHTML = "OpenAI đã kết nối ✓<br>Chọn tài liệu ở tab 📚 Thư viện để tra cứu.";
+  else el.innerHTML = "Sẵn sàng! Hỏi về báo cáo tài chính bên dưới.";
+}
+
+function showErr(msg) {
+  var el = document.getElementById("err-box");
+  if (msg) { el.textContent = msg; el.style.display = "block"; }
+  else el.style.display = "none";
+}
+
+function appendMsg(role, content) {
+  var empty = document.getElementById("empty");
+  if (empty) empty.remove();
+  document.getElementById("chip-row").style.display = "flex";
+  document.getElementById("btn-clear").style.display = "inline-block";
+  document.getElementById("export-bar").style.display = "flex";
+
+  var msgs = document.getElementById("msgs");
+  var row = document.createElement("div");
+  row.className = "msg-row " + (role==="user"?"user":"bot");
+  if (role==="assistant") {
+    var av = document.createElement("div"); av.className = "avatar"; av.textContent = "🤖";
+    row.appendChild(av);
+  }
+  var bub = document.createElement("div");
+  bub.className = "bubble " + (role==="user"?"user":"bot");
+  bub.textContent = content;
+  row.appendChild(bub);
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+  return bub;
+}
+
+function initChips() {
+  var sugEl = document.getElementById("suggestions");
+  SUGGESTED.forEach(function(s){
+    var b = document.createElement("button"); b.className="chip"; b.textContent=s;
+    b.onclick = function(){ sendMsg(s); }; sugEl.appendChild(b);
+  });
+  var cr = document.getElementById("chip-row");
+  SUGGESTED.slice(0,4).forEach(function(s){
+    var b = document.createElement("button"); b.className="chip"; b.textContent=s;
+    b.onclick = function(){ sendMsg(s); }; cr.appendChild(b);
+  });
+}
+
+// ============================================================
+// SEND MESSAGE
+// ============================================================
+function sendMsg(text) {
+  var input = document.getElementById("chat-input");
+  var msg = (text || input.value).trim();
+  if (!msg || loading) return;
+  var apiKey = getApiKey();
+  if (!apiKey) { showErr("Chưa có API Key. Vào tab ⚙️ Cài đặt."); return; }
+  showErr(""); input.value = ""; loading = true;
+  document.getElementById("btn-send").disabled = true;
+  document.getElementById("chat-input").disabled = true;
+
+  messages.push({ role: "user", content: msg });
+  appendMsg("user", msg);
+  var typingBub = appendMsg("assistant", "⏳ Đang phân tích...");
+
+  var docContent = "";
+  if (activeDocId) {
+    var doc = getDocs().find(function(d){ return d.id===activeDocId; });
+    if (doc) docContent = doc.content.slice(0, parseInt(document.getElementById("ctx-select").value)||14000);
+  }
+  var sysContent = SYSTEM_PROMPT + (docContent ? "\n\nNội dung tài liệu BCTC:\n---\n" + docContent + "\n---" : "");
+  var apiMessages = [{ role: "system", content: sysContent }].concat(messages);
+
+  fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
+    body: JSON.stringify({ model: document.getElementById("model-select").value, messages: apiMessages, max_tokens: 2000, temperature: 0.3 })
+  })
+  .then(function(r){
+    if (!r.ok) return r.json().then(function(e){ throw new Error((e.error&&e.error.message)||("HTTP "+r.status)); });
+    return r.json();
+  })
+  .then(function(data){
+    var reply = (data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content) || "Không có phản hồi.";
+    messages.push({ role: "assistant", content: reply });
+    typingBub.textContent = reply;
+  })
+  .catch(function(e){
+    var err = e.message||"Lỗi không xác định";
+    if (err.includes("401")||err.toLowerCase().includes("invalid")) err = "API Key không hợp lệ.";
+    else if (err.includes("429")) err = "Vượt quá giới hạn API. Thử lại sau.";
+    showErr("Lỗi: " + err);
+    typingBub.remove(); messages.pop();
+  })
+  .finally(function(){
+    loading = false;
+    document.getElementById("btn-send").disabled = false;
+    document.getElementById("chat-input").disabled = false;
+    document.getElementById("msgs").scrollTop = 99999;
+  });
+}
+
+function clearChat() {
+  messages = [];
+  var msgs = document.getElementById("msgs");
+  msgs.innerHTML = '<div class="empty" id="empty"><div class="empty-icon">🤖</div><div class="empty-title">Chatbot BCTC · OpenAI</div><div class="empty-sub" id="empty-sub"></div><div class="suggestions" id="suggestions"></div></div>';
+  SUGGESTED.forEach(function(s){
+    var b = document.createElement("button"); b.className="chip"; b.textContent=s;
+    b.onclick=function(){ sendMsg(s); };
+    document.getElementById("suggestions").appendChild(b);
+  });
+  document.getElementById("chip-row").style.display = "none";
+  document.getElementById("btn-clear").style.display = "none";
+  document.getElementById("export-bar").style.display = "none";
+  showErr(""); updateEmptySub();
+}
+
+// ============================================================
+// EXPORT: EXCEL
+// ============================================================
+function exportExcel() {
+  if (!messages.length) { alert("Chưa có hội thoại để xuất!"); return; }
+  var docName = "";
+  if (activeDocId) {
+    var doc = getDocs().find(function(d){ return d.id===activeDocId; });
+    if (doc) docName = doc.name;
+  }
+  var rows = [["STT","Vai trò","Nội dung","Thời gian"]];
+  var now = new Date().toLocaleString("vi-VN");
+  messages.forEach(function(m, i){
+    rows.push([i+1, m.role==="user"?"Người dùng":"Trợ lý AI", m.content, i===0?now:""]);
+  });
+
+  var ws = XLSX.utils.aoa_to_sheet(rows);
+  // Column widths
+  ws["!cols"] = [{wch:6},{wch:14},{wch:80},{wch:20}];
+  // Style header row
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Hội thoại BCTC");
+
+  // Metadata sheet
+  var meta = [
+    ["Chatbot Báo cáo Tài chính"],
+    ["Tài liệu", docName || "(không chọn)"],
+    ["Xuất lúc", now],
+    ["Tổng câu hỏi", messages.filter(function(m){ return m.role==="user"; }).length],
+  ];
+  var wsMeta = XLSX.utils.aoa_to_sheet(meta);
+  wsMeta["!cols"] = [{wch:20},{wch:40}];
+  XLSX.utils.book_append_sheet(wb, wsMeta, "Thông tin");
+
+  XLSX.writeFile(wb, "BCTC_HoiThoai_" + new Date().toLocaleDateString("vi-VN").replace(/\//g,"-") + ".xlsx");
+}
+
+// ============================================================
+// EXPORT: TXT
+// ============================================================
+function exportTxt() {
+  if (!messages.length) { alert("Chưa có hội thoại để xuất!"); return; }
+  var lines = ["=== CHATBOT BÁO CÁO TÀI CHÍNH ===","Xuất lúc: " + new Date().toLocaleString("vi-VN"),""];
+  messages.forEach(function(m){
+    lines.push((m.role==="user"?"[Người dùng]":"[Trợ lý AI]") + "\n" + m.content + "\n");
+  });
+  var blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "BCTC_HoiThoai_" + new Date().toLocaleDateString("vi-VN").replace(/\//g,"-") + ".txt";
+  a.click();
+}
+
+// ============================================================
+// EXPORT: WORD (docx.js)
+// ============================================================
+function exportWord() {
+  if (!messages.length) { alert("Chưa có hội thoại để xuất!"); return; }
+  if (typeof docx === "undefined") { alert("Thư viện Word chưa tải. Vui lòng thử lại sau."); return; }
+
+  var docName = "";
+  if (activeDocId) {
+    var doc = getDocs().find(function(d){ return d.id===activeDocId; });
+    if (doc) docName = doc.name;
+  }
+  var now = new Date().toLocaleString("vi-VN");
+
+  var D = docx;
+  var children = [];
+
+  // Title
+  children.push(new D.Paragraph({
+    children: [new D.TextRun({ text: "Chatbot Báo cáo Tài chính", bold: true, size: 36, color: "185fa5" })],
+    alignment: D.AlignmentType.CENTER,
+    spacing: { after: 200 }
+  }));
+
+  // Subtitle
+  children.push(new D.Paragraph({
+    children: [new D.TextRun({ text: "Xuất lúc: " + now + (docName ? "  |  Tài liệu: " + docName : ""), size: 22, color: "888888" })],
+    alignment: D.AlignmentType.CENTER,
+    spacing: { after: 400 }
+  }));
+
+  // Messages
+  messages.forEach(function(m, i) {
+    var isUser = m.role === "user";
+    var label = isUser ? "👤 Người dùng" : "🤖 Trợ lý AI";
+    var labelColor = isUser ? "1a1a18" : "0f6e56";
+
+    // Label
+    children.push(new D.Paragraph({
+      children: [new D.TextRun({ text: (i+1) + ". " + label, bold: true, size: 24, color: labelColor })],
+      spacing: { before: 280, after: 80 }
+    }));
+
+    // Content — split by newline
+    var lines = m.content.split("\n");
+    lines.forEach(function(line) {
+      children.push(new D.Paragraph({
+        children: [new D.TextRun({ text: line || " ", size: 22 })],
+        spacing: { after: 40 },
+        indent: { left: 360 }
+      }));
+    });
+  });
+
+  var document = new D.Document({
+    sections: [{
+      properties: {
+        page: { size: { width: 11906, height: 16838 }, margin: { top: 1134, right: 1134, bottom: 1134, left: 1134 } }
+      },
+      children: children
+    }]
+  });
+
+  D.Packer.toBlob(document).then(function(blob) {
+    var a = document.createElement ? document.createElement("a") : window.document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "BCTC_HoiThoai_" + new Date().toLocaleDateString("vi-VN").replace(/\//g,"-") + ".docx";
+    a.click();
+  }).catch(function(e){ alert("Lỗi xuất Word: " + e.message); });
+}
+
+// ============================================================
+// DRAG & DROP
+// ============================================================
+var zone = document.getElementById("upload-zone");
+zone.addEventListener("dragover", function(e){ e.preventDefault(); zone.style.borderColor="#1d9e75"; });
+zone.addEventListener("dragleave", function(){ zone.style.borderColor="#ccc"; });
+zone.addEventListener("drop", function(e){
+  e.preventDefault(); zone.style.borderColor="#ccc";
+  if (e.dataTransfer.files.length) uploadFiles({ files: e.dataTransfer.files, value: "" });
+});
+
+// ============================================================
+// BOOT
+// ============================================================
+handleOAuthCallback();
+loadStoredToken();
+checkApiKeyOnLoad();
+initChips();
+renderDocList();
+</script>
+</body>
+</html>
